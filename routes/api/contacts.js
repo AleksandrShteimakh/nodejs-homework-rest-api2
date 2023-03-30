@@ -33,6 +33,8 @@ router.post('/', async (req, res, next) => {
   const { error } = schema.validate(req.body);
   if (error) {
     return res.status(400).json({ message: error.details[0].message });
+  } else if (!name || !email || !phone) {
+    return res.status(400).json({ message: "missing required name, email or phone field" });
   } else {
     const newContact = {
       id: nanoid(),
@@ -65,6 +67,8 @@ router.put('/:contactId', async (req, res, next) => {
   const { error } = schema.validate(req.body);
   if (error) {
     return res.status(400).json({ message: error.details[0].message });
+  } else if (!name || !email || !phone) {
+    return res.status(400).json({ message: "missing required name, email or phone field" });
   } else {
     try {
       const contact = await contacts.updateContact(req.params.contactId, { name, email, phone });
