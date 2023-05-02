@@ -12,4 +12,4 @@ module.exports = {
     getCurrent,
     updateSubscription,
     updateAvatar,
-};
+}
