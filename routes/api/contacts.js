@@ -1,84 +1,43 @@
 const express = require('express');
-const contacts = require('../../models/contacts');
-const { nanoid } = require('nanoid');
-const Joi = require('joi');
 
-const schema = Joi.object({
-  name: Joi.string().required(),
-  email: Joi.string().email().required(),
-  phone: Joi.string()
-    .pattern(/^\+?[0-9]{3,}$/)
-    .required(),
-});
+const { contacts: ctrl } = require('../../controllers');
+const validation = require('../../middlewares/validation');
+const {
+    addContactSchema,
+    updateContactSchema,
+    updateStatusContactSchema,
+} = require('../../schemas/contacts');
+const isValidId = require('../../middlewares/isValidId');
+const authenticate = require('../../middlewares/authenticate');
 
-const router = express.Router();
+const router = express();
 
-router.get('/', async (req, res, next) => {
-  const result = await contacts.listContacts();
-  res.json(result);
-});
+router.get('/', authenticate, ctrl.listContacts);
 
-router.get('/:contactId', async (req, res, next) => {
-  try {
-    const contact = await contacts.getContactById(req.params.contactId);
-    res.json(contact);
-  } catch (err) {
-    console.log(err.message);
-    res.status(404).send({ message: err.message });
-  }
-});
+router.get('/:contactId', authenticate, isValidId, ctrl.getContactById);
 
-router.post('/', async (req, res, next) => {
-  const { name, email, phone } = req.body;
-  const { error } = schema.validate(req.body);
-  if (error) {
-    return res.status(400).json({ message: error.details[0].message });
-  } else if (!name || !email || !phone) {
-    return res.status(400).json({ message: "missing required name, email or phone field" });
-  } else {
-    const newContact = {
-      id: nanoid(),
-      name,
-      email,
-      phone,
-    };
-    console.log(newContact);
+router.post(
+    '/',
+    authenticate,
+    validation.validate(addContactSchema),
+    ctrl.addContact
+);
 
-    const contact = await contacts.addContact(newContact);
-    if (contact) {
-      res.status(201).send(contact);
-    }
-  }
-});
+router.delete('/:contactId', authenticate, isValidId, ctrl.removeContact);
 
-router.delete('/:contactId', async (req, res, next) => {
-  try {
-    const contact = await contacts.removeContact(req.params.contactId);
-    if (contact) {
-      res.json({ message: 'contact deleted' });
-    }
-  } catch (err) {
-    res.status(404).send({ message: err.message });
-  }
-});
+router.put(
+    '/:contactId',
+    authenticate,
+    isValidId,
+    validation.validate(updateContactSchema),
+    ctrl.updateContact
+);
 
-router.put('/:contactId', async (req, res, next) => {
-  const { name, email, phone } = req.body;
-  const { error } = schema.validate(req.body);
-  if (error) {
-    return res.status(400).json({ message: error.details[0].message });
-  } else if (!name || !email || !phone) {
-    return res.status(400).json({ message: "missing required name, email or phone field" });
-  } else {
-    try {
-      const contact = await contacts.updateContact(req.params.contactId, { name, email, phone });
-      if (contact) {
-        res.json({ message: contact });
-      }
-    } catch (err) {
-      res.status(404).send({ message: err.message });
-    }
-  }
-});
+router.patch(
+    '/:contactId/favorite',
+    authenticate,
+    validation.validate(updateStatusContactSchema),
+    ctrl.updateStatusContact
+);
 
 module.exports = router;
